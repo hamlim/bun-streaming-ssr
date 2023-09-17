@@ -11,6 +11,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@srvr-rndr/react": "^0.0.1",
     "react": "canary",
     "react-dom": "canary"
   }

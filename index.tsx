@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { renderToReadableStream, renderToString } from "react-dom/server";
+import { AppProps, getReactRequestHandler } from "@srvr-rndr/react";
 
 function sleep(ms: number) {
   return new Promise((r) => {
@@ -7,22 +7,25 @@ function sleep(ms: number) {
   });
 }
 
-async function HeavyComponent({ request }: { request: Request }) {
+async function HeavyComponent({ url }: AppProps) {
   await sleep(1500);
-  console.log(request);
 
-  return <p>Request from: {request.url}</p>;
+  return <p>Request from: {url}</p>;
 }
 
-function App({ request }: { request: Request }) {
+function App({ url }: AppProps) {
   return (
     <div>
       <Suspense fallback="Loading...">
         {/* @ts-expect-error - async components */}
-        <HeavyComponent request={request} />
+        <HeavyComponent url={url} />
       </Suspense>
     </div>
   );
+}
+
+function Fallback() {
+  return <p>Error!</p>;
 }
 
 Bun.serve({
@@ -31,21 +34,7 @@ Bun.serve({
       return new Response("not found", { status: 404 });
     }
 
-    try {
-      let stream = await renderToReadableStream(<App request={request} />, {
-        onError(error: unknown, errorInfo: unknown) {
-          console.error(error, errorInfo);
-        },
-      });
-
-      return new Response(stream, {
-        status: 200,
-      });
-    } catch (e) {
-      return new Response(renderToString(<div>Failed to render</div>), {
-        status: 500,
-      });
-    }
+    return getReactRequestHandler({ App, Fallback })(request);
   },
   port: 3000,
 });
